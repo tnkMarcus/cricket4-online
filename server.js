@@ -4,12 +4,16 @@ const socketIo = require('socket.io');
 const admin = require('firebase-admin');
 
 // --- Firebaseの初期化 ---
-const serviceAccount = require('./serviceAccountKey.json');
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount)
-});
+try {
+    const serviceAccount = require('./serviceAccountKey.json');
+    admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount)
+    });
+} catch (error) {
+    console.error("CRITICAL ERROR: serviceAccountKey.json が見つからないか、内容が正しくありません。");
+    process.exit(1);
+}
 const db = admin.firestore();
-// -------------------------
 
 const app = express();
 const server = http.createServer(app);
@@ -25,25 +29,24 @@ app.use(express.static(__dirname));
 io.on('connection', (socket) => {
     console.log(`[接続] ユーザー: ${socket.id}`);
 
-    const createRoom = async ({ roomId }) => {
-        if (!roomId) return socket.emit('errorMsg', '部屋の名前を入力してください。');
+    const createRoom = async ({ roomId, playerName }) => {
+        if (!roomId || !playerName) return socket.emit('errorMsg', '名前と部屋の名前を入力してください。');
         const roomRef = db.collection('rooms').doc(roomId);
         const doc = await roomRef.get();
         if (doc.exists) return socket.emit('errorMsg', 'エラー: その部屋名は既に使用されています。');
 
         const newRoomData = {
             id: roomId,
-            players: [{ id: socket.id, name: '先行 (赤)', playerNumber: 1 }],
+            players: [{ id: socket.id, name: playerName, playerNumber: 1 }],
             createdAt: new Date()
         };
         await roomRef.set(newRoomData);
-        
         socket.join(roomId);
         socket.emit('roomCreated', { roomId, playerId: socket.id });
     };
 
-    const joinRoom = async ({ roomId }) => {
-        if (!roomId) return socket.emit('errorMsg', '部屋の名前を入力してください。');
+    const joinRoom = async ({ roomId, playerName }) => {
+        if (!roomId || !playerName) return socket.emit('errorMsg', '名前と部屋の名前を入力してください。');
         const roomRef = db.collection('rooms').doc(roomId);
         const doc = await roomRef.get();
         if (!doc.exists) return socket.emit('errorMsg', 'エラー: その部屋は存在しません。');
@@ -51,14 +54,10 @@ io.on('connection', (socket) => {
         const roomData = doc.data();
         if (roomData.players.length >= 2) return socket.emit('errorMsg', 'エラー: その部屋は満員です。');
 
-        roomData.players.push({ id: socket.id, name: '後攻 (青)', playerNumber: 2 });
-        const gameState = createInitialGameState(roomData); // ここでゲーム状態を生成
+        roomData.players.push({ id: socket.id, name: playerName, playerNumber: 2 });
+        const gameState = createInitialGameState(roomData);
         
-        await roomRef.update({
-            players: roomData.players,
-            gameState: gameState // 生成したゲーム状態を保存
-        });
-
+        await roomRef.update({ players: roomData.players, gameState });
         socket.join(roomId);
         io.to(roomId).emit('gameStart', gameState);
     };
@@ -70,8 +69,9 @@ io.on('connection', (socket) => {
         const { roomId, roomData } = roomInfo;
         const roomRef = db.collection('rooms').doc(roomId);
         const { gameState } = roomData;
-        const player = gameState.players[gameState.currentPlayerIndex];
+        if (!gameState) return;
 
+        const player = gameState.players[gameState.currentPlayerIndex];
         if (player.id !== socket.id || gameState.isGameOver || gameState.rollsLeft === 0) return;
 
         handleRoll(gameState, target);
@@ -83,7 +83,6 @@ io.on('connection', (socket) => {
         if (gameState.isGameOver) {
             const winner = getWinner(gameState);
             io.to(roomId).emit('gameOver', { winner, finalState: gameState });
-            await roomRef.delete(); // ゲーム終了後に部屋を削除
         }
     };
 
@@ -115,8 +114,7 @@ async function findRoomBySocketId(socketId) {
     return null;
 }
 
-// --- ▼▼▼ ここから下が不足していたゲームロジック関数です ▼▼▼ ---
-
+// --- ゲームロジック ---
 function createInitialGameState(roomData) {
     const p1 = roomData.players.find(p => p.playerNumber === 1);
     const p2 = roomData.players.find(p => p.playerNumber === 2);
@@ -129,14 +127,13 @@ function createInitialGameState(roomData) {
         currentPlayerIndex: 0, round: 1, rollsLeft: 3, isGameOver: false,
     };
 }
-
 function createInitialMarks() { return TARGETS.reduce((obj, key) => ({...obj, [key]: 0}), {}); }
 function createInitialStats() { return { totalThrows: 0, totalHits: 0, marksScored: 0, totalHitValue: 0 }; }
 
 function handleRoll(gameState, target) {
     const player = gameState.players[gameState.currentPlayerIndex];
     player.stats.totalThrows++;
-    const { hitMark, resultText } = calculateRoll(); // targetは現在未使用
+    const { hitMark, resultText } = calculateRoll(target);
     player.stats.totalHitValue += hitMark;
     if (hitMark > 0) {
         player.stats.totalHits++;
@@ -146,14 +143,22 @@ function handleRoll(gameState, target) {
     gameState.rollsLeft--;
 }
 
-function calculateRoll() {
+function calculateRoll(target) {
     let hitMark = 0, resultText = '';
-    // このバージョンではブルも他のナンバーも同じ12面ダイスを使用します
-    const diceRoll = Math.floor(Math.random() * 12) + 1;
-    if (diceRoll <= 2) { hitMark = 0; resultText = 'ミス'; }
-    else if (diceRoll <= 4) { hitMark = 1; resultText = 'シングル！'; }
-    else if (diceRoll <= 6) { hitMark = 2; resultText = 'ダブル！'; }
-    else { hitMark = 3; resultText = 'トリプル！'; }
+    if (target === 'bull') {
+        const diceRoll = Math.floor(Math.random() * 6) + 1; // 6面
+        // 0:2面, 1:3面, 2:1面
+        if (diceRoll <= 2) { hitMark = 0; resultText = 'ブル ミス'; } 
+        else if (diceRoll <= 5) { hitMark = 1; resultText = 'シングルブル！'; } 
+        else { hitMark = 2; resultText = 'ダブルブル！'; }
+    } else {
+        const diceRoll = Math.floor(Math.random() * 12) + 1; // 12面
+        // 0:2面, 1:6面, 2:1面, 3:3面
+        if (diceRoll <= 2) { hitMark = 0; resultText = 'ミス'; } 
+        else if (diceRoll <= 8) { hitMark = 1; resultText = 'シングル！'; } 
+        else if (diceRoll <= 9) { hitMark = 2; resultText = 'ダブル！'; } 
+        else { hitMark = 3; resultText = 'トリプル！'; }
+    }
     return { hitMark, resultText };
 }
 
@@ -177,7 +182,6 @@ function updateMarksAndScore(gameState, target, hitMark) {
 
 function checkGameEnd(gameState) {
     if (gameState.rollsLeft > 0) return;
-
     const p1 = gameState.players[0];
     const p2 = gameState.players[1];
     const p1AllClosed = TARGETS.every(target => p1.marks[target] === 3);
@@ -188,7 +192,6 @@ function checkGameEnd(gameState) {
     if (gameState.round >= MAX_ROUNDS && gameState.currentPlayerIndex === 1) {
         gameState.isGameOver = true; return;
     }
-
     gameState.currentPlayerIndex = 1 - gameState.currentPlayerIndex;
     gameState.rollsLeft = 3;
     if (gameState.currentPlayerIndex === 0) gameState.round++;

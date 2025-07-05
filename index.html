@@ -2,17 +2,24 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>cricket4 - Online</title>
+    <title>cricket - Online</title>
     <link rel="stylesheet" href="style.css">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
 <body>
-    <h1>cricket4 - Online</h1>
+    <h1>CRICKET: ZERO</h1>
 
     <div id="room-container">
         <h2>オンライン対戦</h2>
-        <input type="text" id="room-id-input" placeholder="部屋の名前">
-        <button id="create-room-btn">部屋を作る</button>
+        <div class="rule-box">
+            <h3>ルール説明</h3>
+            <p>
+                ターゲットナンバー(15-20, BULL)に3マーク入れて陣地を確保(クローズ)し、相手より高いスコアを目指すゲームです。自分の陣地にマークを入れると得点になります。15ラウンド終了、またはいずれかのプレイヤーが全陣地をクローズし相手以上のスコアを獲得した時点でゲーム終了です。
+            </p>
+        </div>
+        <input type="text" id="player-name-input" placeholder="あなたの名前を入力">
+        <input type="text" id="room-id-input" placeholder="部屋の名前を入力">
+        <button id="create-room-btn">部屋を作る (あなたが先行)</button>
         <button id="join-room-btn">部屋に入る</button>
     </div>
 
@@ -52,7 +59,7 @@
             <h2>ゲーム結果</h2>
             <div id="stats-grid"></div>
         </div>
-        <button id="leave-room-btn">モード選択に戻る</button>
+        <button id="leave-room-btn">トップに戻る</button>
     </div>
 
     <script src="/socket.io/socket.io.js"></script>

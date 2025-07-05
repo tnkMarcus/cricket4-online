@@ -7,15 +7,34 @@ body {
 }
 h1 { font-weight: 700; letter-spacing: 2px; }
 .hidden { display: none !important; }
+
 #room-container {
     background: #fff; padding: 20px; border-radius: 8px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1); max-width: 400px; margin: 20px auto;
+}
+.rule-box {
+    text-align: left;
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 5px;
+    padding: 10px 15px;
+    margin-bottom: 20px;
+    font-size: 0.9em;
+}
+.rule-box h3 {
+    margin: 0 0 5px 0;
+    text-align: center;
+}
+.rule-box p {
+    margin: 0;
+    line-height: 1.6;
 }
 #room-container input {
     display: block; width: calc(100% - 22px); padding: 10px;
     margin: 0 auto 10px; border: 1px solid #ccc; border-radius: 4px;
 }
 #room-container button { margin: 5px; }
+
 #scoreboard { margin: 20px auto; border-collapse: collapse; width: 100%; max-width: 400px; }
 #scoreboard th, #scoreboard td { border: 1px solid #ccc; padding: 10px; text-align: center; font-size: 1.1em; }
 .number-cell { font-weight: bold; }
