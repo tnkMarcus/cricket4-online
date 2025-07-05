@@ -74,7 +74,7 @@ io.on('connection', (socket) => {
         const player = gameState.players[gameState.currentPlayerIndex];
         if (player.id !== socket.id || gameState.isGameOver || gameState.rollsLeft === 0) return;
 
-        handleRoll(gameState, target);
+        handleRoll(gameState, target); // ここで新しいルールが適用される
         checkGameEnd(gameState);
         
         await roomRef.update({ gameState });
@@ -130,21 +130,37 @@ function createInitialGameState(roomData) {
 function createInitialMarks() { return TARGETS.reduce((obj, key) => ({...obj, [key]: 0}), {}); }
 function createInitialStats() { return { totalThrows: 0, totalHits: 0, marksScored: 0, totalHitValue: 0 }; }
 
+// ▼▼▼ ここからが修正された部分です ▼▼▼
 function handleRoll(gameState, target) {
     const player = gameState.players[gameState.currentPlayerIndex];
+    const opponent = gameState.players[1 - gameState.currentPlayerIndex];
     player.stats.totalThrows++;
-    const { hitMark, resultText } = calculateRoll(target);
+
+    // 先に、そのナンバーが両者によってクローズされているかを確認
+    const isClosedByBoth = player.marks[target] === 3 && opponent.marks[target] === 3;
+
+    let { hitMark, resultText } = calculateRoll(target);
+
+    // もしクローズされていれば、結果を強制的に「ミス」にする
+    if (isClosedByBoth) {
+        hitMark = 0;
+        resultText = '（クローズ済み）';
+    }
+    
     player.stats.totalHitValue += hitMark;
+
     if (hitMark > 0) {
         player.stats.totalHits++;
         updateMarksAndScore(gameState, target, hitMark);
     }
+    
     gameState.lastRoll = `${player.name}が ${target.toUpperCase()}に${resultText}`;
     gameState.rollsLeft--;
 }
 
 function calculateRoll(target) {
     let hitMark = 0, resultText = '';
+    // 新しいサイコロの確率
     if (target === 'bull') {
         const diceRoll = Math.floor(Math.random() * 6) + 1; // 6面
         // 0:2面, 1:3面, 2:1面
@@ -161,6 +177,7 @@ function calculateRoll(target) {
     }
     return { hitMark, resultText };
 }
+// ▲▲▲ ここまでが修正された部分です ▲▲▲
 
 function updateMarksAndScore(gameState, target, hitMark) {
     const player = gameState.players[gameState.currentPlayerIndex];
