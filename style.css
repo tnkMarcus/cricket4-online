@@ -36,9 +36,17 @@ h1 { font-weight: 700; letter-spacing: 2px; }
 #room-container button { margin: 5px; }
 
 #scoreboard { margin: 20px auto; border-collapse: collapse; width: 100%; max-width: 400px; }
-#scoreboard th, #scoreboard td { border: 1px solid #ccc; padding: 10px; text-align: center; font-size: 1.1em; }
+#scoreboard th, #scoreboard td { border: 1px solid #ccc; padding: 10px; text-align: center; font-size: 1.1em; transition: all 0.3s; }
 .number-cell { font-weight: bold; }
-.closed-by-both { text-decoration: line-through; color: #aaa; background-color: #e9e9e9; }
+
+/* ▼▼▼ このスタイルを変更 ▼▼▼ */
+.closed-by-both td {
+    text-decoration: line-through;
+    color: #aaa;
+    background-color: #f1f3f5;
+}
+/* ▲▲▲ */
+
 #scoreboard .marks { width: 70px; font-size: 1.4em; font-weight: bold; letter-spacing: 2px; }
 .score-display { font-size: 1.6em; font-weight: bold; }
 .mpr-display { font-size: 1em; font-weight: bold; opacity: 0.8; }
