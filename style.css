@@ -1,0 +1,41 @@
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Segoe UI", "Hiragino Kaku Gothic ProN", "メイリオ", Meiryo, sans-serif;
+    text-align: center;
+    background-color: #f4f4f4;
+    color: #333;
+    padding: 1em;
+}
+h1 { font-weight: 700; letter-spacing: 2px; }
+.hidden { display: none !important; }
+#room-container {
+    background: #fff; padding: 20px; border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1); max-width: 400px; margin: 20px auto;
+}
+#room-container input {
+    display: block; width: calc(100% - 22px); padding: 10px;
+    margin: 0 auto 10px; border: 1px solid #ccc; border-radius: 4px;
+}
+#room-container button { margin: 5px; }
+#scoreboard { margin: 20px auto; border-collapse: collapse; width: 100%; max-width: 400px; }
+#scoreboard th, #scoreboard td { border: 1px solid #ccc; padding: 10px; text-align: center; font-size: 1.1em; }
+.number-cell { font-weight: bold; }
+.closed-by-both { text-decoration: line-through; color: #aaa; background-color: #e9e9e9; }
+#scoreboard .marks { width: 70px; font-size: 1.4em; font-weight: bold; letter-spacing: 2px; }
+.score-display { font-size: 1.6em; font-weight: bold; }
+.mpr-display { font-size: 1em; font-weight: bold; opacity: 0.8; }
+.player-1-color { color: #c92a2a; }
+.player-2-color { color: #1864ab; }
+#controls, #result-area { margin: 20px 0; }
+#controls p { margin-top: 15px; font-size: 1.2em; }
+button { padding: 10px 20px; font-size: 1.1em; cursor: pointer; border-radius: 5px; border: 1px solid #ccc; }
+#leave-room-btn { margin-top: 20px; background-color: #868e96; color: white; border: none;}
+#message-log { font-weight: bold; font-size: 1.2em; min-height: 28px; }
+#target-buttons { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: auto; max-width: 400px; }
+.target-btn { padding: 12px; font-size: 1.1em; font-weight: bold; border: 2px solid #555; background-color: #fff; color: #333; border-radius: 8px; cursor: pointer; min-width: 60px; text-align: center; flex-grow: 1; transition: transform 0.1s ease; }
+.target-btn:active { transform: scale(0.95); background-color: #e9e9e9; }
+.winner-message { font-size: 2em !important; animation: flash 1.5s infinite; }
+@keyframes flash { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+#stats-container { margin-top: 30px; background: #fff; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); max-width: 400px; margin: 30px auto 0; }
+#stats-grid { display: flex; justify-content: space-around; }
+#stats-grid h3 { margin-top: 0; }
+#stats-grid p { margin: 5px 0; font-size: 1.1em; }

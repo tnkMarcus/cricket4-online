@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>cricket4 - Online</title>
+    <link rel="stylesheet" href="style.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+    <h1>cricket4 - Online</h1>
+
+    <div id="room-container">
+        <h2>オンライン対戦</h2>
+        <input type="text" id="room-id-input" placeholder="部屋の名前">
+        <button id="create-room-btn">部屋を作る</button>
+        <button id="join-room-btn">部屋に入る</button>
+    </div>
+
+    <div id="game-container" class="hidden">
+        <div id="game-info">
+            <p>ラウンド: <span id="round-counter">1</span> / 15</p>
+            <p>ターン: <span id="current-player"></span></p>
+        </div>
+        <table id="scoreboard">
+            <thead>
+                <tr>
+                    <th id="p1-header" class="player-1-color"></th>
+                    <th>ナンバー</th>
+                    <th id="p2-header" class="player-2-color"></th>
+                </tr>
+                <tr>
+                    <td id="p1-score" class="score-display player-1-color">0</td>
+                    <td>SCORE</td>
+                    <td id="p2-score" class="score-display player-2-color">0</td>
+                </tr>
+                <tr>
+                    <td id="p1-mpr-live" class="mpr-display player-1-color">0.00</td>
+                    <td>MPR</td>
+                    <td id="p2-mpr-live" class="mpr-display player-2-color">0.00</td>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+        <div id="controls">
+            <div id="target-buttons"></div>
+            <p>残り <span id="rolls-left">3</span> 投</p>
+        </div>
+        <div id="result-area">
+            <p id="message-log"></p>
+        </div>
+        <div id="stats-container" class="hidden">
+            <h2>ゲーム結果</h2>
+            <div id="stats-grid"></div>
+        </div>
+        <button id="leave-room-btn">モード選択に戻る</button>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
