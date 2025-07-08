@@ -1,22 +1,87 @@
 const socket = io();
 
-// ...（HTML要素取得部分は変更なし）...
-let myPlayerId = null;
-let currentGameState = null;
+// --- HTML要素を取得 ---
+const roomContainer = document.getElementById('room-container');
+const gameContainer = document.getElementById('game-container');
+const playerNameInput = document.getElementById('player-name-input');
+const roomIdInput = document.getElementById('room-id-input');
+const createRoomBtn = document.getElementById('create-room-btn');
+const joinRoomBtn = document.getElementById('join-room-btn');
+const targetButtonsContainer = document.getElementById('target-buttons');
+const messageLogEl = document.getElementById('message-log');
+const leaveRoomBtn = document.getElementById('leave-room-btn');
 
-// ...（イベントリスナー部分は変更なし）...
+let myPlayerId = null;
+
+// --- イベントリスナー ---
+createRoomBtn.addEventListener('click', () => {
+    const playerName = playerNameInput.value.trim();
+    const roomId = roomIdInput.value.trim();
+    socket.emit('createRoom', { roomId, playerName });
+});
+joinRoomBtn.addEventListener('click', () => {
+    const playerName = playerNameInput.value.trim();
+    const roomId = roomIdInput.value.trim();
+    socket.emit('joinRoom', { roomId, playerName });
+});
+targetButtonsContainer.addEventListener('click', (e) => {
+    if (e.target.classList.contains('target-btn')) {
+        socket.emit('rollDice', { target: e.target.dataset.value });
+    }
+});
+leaveRoomBtn.addEventListener('click', () => location.reload());
+
+// --- サーバーからのイベント受信 ---
+socket.on('connect', () => {
+    console.log('サーバーに接続しました。ID:', socket.id);
+});
+
+socket.on('roomCreated', ({ roomId, playerId }) => {
+    console.log('[受信] 部屋作成成功！', { roomId, playerId });
+    myPlayerId = playerId;
+    showGameContainer();
+    messageLogEl.textContent = `部屋[${roomId}]を作成しました。相手を待っています...`;
+});
+
+socket.on('gameStart', (gameState) => {
+    console.log('[受信] ゲーム開始！', gameState);
+    if (!myPlayerId) myPlayerId = socket.id;
+    showGameContainer();
+    buildUIElements(gameState);
+    updateUI(gameState);
+});
+
+socket.on('updateState', (gameState) => {
+    updateUI(gameState);
+});
+
+socket.on('gameOver', ({ winner, finalState }) => {
+    updateUI(finalState);
+    const winnerPlayer = finalState.players.find(p => p.id === winner?.id);
+    const message = winnerPlayer ? `<span class="${winnerPlayer.playerNumber === 1 ? 'player-1-color' : 'player-2-color'}">${winnerPlayer.name} の勝利！</span>` : "引き分け！";
+    messageLogEl.innerHTML = message;
+    messageLogEl.classList.add('winner-message');
+    document.getElementById('stats-container').classList.remove('hidden');
+    targetButtonsContainer.style.pointerEvents = 'none';
+});
+
+socket.on('errorMsg', (message) => alert(message));
+socket.on('opponentLeft', () => {
+    alert('相手が退出しました。');
+    location.reload();
+});
 
 // --- UI更新関数 ---
 function showGameContainer() {
-    document.getElementById('room-container').classList.add('hidden');
-    document.getElementById('game-container').classList.remove('hidden');
+    console.log('ゲーム画面に切り替えます...');
+    roomContainer.classList.add('hidden');
+    gameContainer.classList.remove('hidden');
 }
 
 function buildUIElements(gameState) {
     const { players, TARGETS } = gameState;
     const me = players.find(p => p.id === myPlayerId);
     const opponent = players.find(p => p.id !== myPlayerId);
-    
     const p1 = me.playerNumber === 1 ? me : opponent;
     const p2 = me.playerNumber === 2 ? me : opponent;
 
@@ -27,12 +92,10 @@ function buildUIElements(gameState) {
     scoreboardBody.innerHTML = '';
     TARGETS.forEach(target => {
         const row = document.createElement('tr');
-        row.id = `row-${target}`; // 行にIDを付与
         row.innerHTML = `<td class="marks player-1-color" id="p1-marks-${target}"></td><td class="number-cell">${target.toString().toUpperCase()}</td><td class="marks player-2-color" id="p2-marks-${target}"></td>`;
         scoreboardBody.appendChild(row);
     });
 
-    const targetButtonsContainer = document.getElementById('target-buttons');
     targetButtonsContainer.innerHTML = '';
     TARGETS.forEach(target => {
         const button = document.createElement('button');
@@ -47,7 +110,6 @@ function updateUI(gameState) {
     const { players, round, currentPlayerIndex, rollsLeft, isGameOver, lastRoll, TARGETS, MAX_ROUNDS } = gameState;
     const me = players.find(p => p.id === myPlayerId);
     if (!me) return;
-    
     const opponent = players.find(p => p.id !== myPlayerId);
     if (!opponent && !isGameOver) return;
 
@@ -67,26 +129,16 @@ function updateUI(gameState) {
     TARGETS.forEach(target => {
         if (p1) document.getElementById(`p1-marks-${target}`).textContent = '●'.repeat(p1.marks[target]);
         if (p2) document.getElementById(`p2-marks-${target}`).textContent = '●'.repeat(p2.marks[target]);
-        
-        // ▼▼▼ ここからが修正部分です ▼▼▼
         const row = document.getElementById(`row-${target}`);
-        if(row && p1 && p2) {
-            // 両プレイヤーが3マークなら .closed-by-both クラスを付与
-            if (p1.marks[target] === 3 && p2.marks[target] === 3) {
-                row.classList.add('closed-by-both');
-            } else {
-                row.classList.remove('closed-by-both');
-            }
-        }
-        // ▲▲▲ ここまで ▲▲▲
+        if(row && p1 && p2) row.classList.toggle('closed-by-both', p1.marks[target] === 3 && p2.marks[target] === 3);
     });
 
     document.getElementById('round-counter').textContent = Math.min(round, MAX_ROUNDS);
     if (!isGameOver) {
         document.getElementById('current-player').innerHTML = `<span class="${currentPlayer.playerNumber === 1 ? 'player-1-color' : 'player-2-color'}">${currentPlayer.name}</span> のターン`;
         document.getElementById('rolls-left').textContent = rollsLeft;
-        document.getElementById('target-buttons').style.pointerEvents = (currentPlayer.id === myPlayerId) ? 'auto' : 'none';
-        if(lastRoll) document.getElementById('message-log').textContent = lastRoll;
+        targetButtonsContainer.style.pointerEvents = (currentPlayer.id === myPlayerId) ? 'auto' : 'none';
+        if(lastRoll) messageLogEl.textContent = lastRoll;
     }
     
     if (isGameOver && p1 && p2) {
@@ -98,14 +150,9 @@ function updateUI(gameState) {
         
         document.getElementById('p1-header').textContent = p1.name;
         document.getElementById('p2-header').textContent = p2.name;
-
         statsGrid.innerHTML = `
             <div><h3 class="${p1.playerNumber === 1 ? 'player-1-color' : 'player-2-color'}">${p1.name}</h3><p>ヒット率: ${p1HitRate}%</p><p>MPR: ${p1Mpr}</p></div>
             <div><h3 class="${p2.playerNumber === 1 ? 'player-1-color' : 'player-2-color'}">${p2.name}</h3><p>ヒット率: ${p2HitRate}%</p><p>MPR: ${p2Mpr}</p></div>
         `;
     }
 }
-
-// --- その他の関数（変更なし） ---
-// (socket.on, showGameContainer, buildUIElements, etc.)
-// (server.js は変更なし)
